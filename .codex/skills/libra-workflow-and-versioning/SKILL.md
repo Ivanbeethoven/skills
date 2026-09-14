@@ -2,7 +2,7 @@
 name: libra-workflow-and-versioning
 description: Structures Libra (AI-agent-native VCS) workflow practices. Use when making any change in a `libra` repository. Use when committing, branching, working across worktrees, backing up to the cloud, or organizing work for AI agents. Adapts git-workflow-and-versioning to Libra's SQLite-backed refs, per-worktree HEAD over shared object storage, and structured CLI surface.
 metadata:
-  libra_version: "0.22.10"
+  libra_version: "0.22.19"
 ---
 
 # Libra Workflow and Versioning
@@ -15,7 +15,7 @@ Treat commits as save points, branches as sandboxes, and history as documentatio
 
 **Libra is not Git.** Most commands mirror Git (`add`, `commit`, `branch`, `merge`, `rebase`, `log`, `diff`, `bisect`), but the storage model and a few behaviors diverge deliberately. When unsure whether a flag is honored, consult `COMPATIBILITY.md` at the root of the Libra source tree — every top-level command is classed `supported` / `partial` / `unsupported` / `intentionally-different` — and `docs/commands/<name>.md` for the per-flag contract. The biggest divergences for everyday workflow are **worktrees**, **commit signing**, and **commit conventions**.
 
-> Verified against **Libra 0.22.10**. Libra moves fast: when anything here contradicts `libra <cmd> --help` or `docs/commands/<name>.md`, the binary wins — `CHANGELOG.md` carries the breaking-change trail.
+> Verified against **Libra 0.22.19**. Libra moves fast: when anything here contradicts `libra <cmd> --help` or `docs/commands/<name>.md`, the binary wins — `CHANGELOG.md` carries the breaking-change trail.
 
 **Deeper references** (read on demand, not up front):
 
@@ -30,6 +30,15 @@ Treat commits as save points, branches as sandboxes, and history as documentatio
 ## When to Use
 
 Always, for every change in a `libra` repository. Every code change flows through Libra.
+
+## Entering a Repository
+
+Start each session with `libra --json status`, then inspect the current branch and
+remotes. Use `libra clone <url> [path]` for a new checkout, or `libra init` for an
+existing project. Read repository-local `AGENTS.md` and contribution instructions
+before editing. Report authentication or metadata failures by their `LBR-*` code;
+never edit `.libra/` manually. Use `libra --offline` only when local objects are
+intentionally sufficient.
 
 ## Core Principles
 
@@ -216,6 +225,15 @@ Agent starts work
 
 You never lose more than one increment. If an agent goes off the rails, `libra reset --hard HEAD` returns to the last successful state. (Reflog is in SQLite — `libra reflog` recovers a lost commit even after a hard reset.)
 
+## Synchronizing and Integrating
+
+Refresh with `libra fetch origin`. Use `libra pull --ff-only` to avoid merge
+commits, or `libra pull --rebase` for local-only commits. Preview with
+`libra merge --dry-run origin/main`. After conflicts, inspect JSON status, resolve
+and stage exact paths, then run `libra merge --continue` or `libra rebase --continue`;
+use `--skip` or `--abort` as appropriate. `merge --restart` discards current
+resolutions and reruns the recorded merge. Locked branches require merge or revert.
+
 ## Change Summaries
 
 After any modification, provide a structured summary. This makes review easier, documents scope discipline, and surfaces unintended changes:
@@ -247,11 +265,15 @@ libra diff --staged
 # 2. Ensure no secrets slipped in
 libra diff --staged | grep -iE "password|secret|api[_-]?key|token"
 
-# 3. Run the project's checks. For the Libra codebase itself:
+# 3. Run the project's documented checks. For the Libra codebase itself:
 cargo +nightly fmt --all --check
 cargo clippy --all-targets --all-features -- -D warnings   # zero warnings required
 LIBRA_SKIP_WEB_BUILD=1 cargo test --all                    # L1 layer; L2/L3 auto-skip
 ```
+
+For other languages, discover formatter, linter, type checker, and test entry
+points from repository documentation and manifests; do not apply Cargo commands
+blindly.
 
 Wire repeatable checks into a Libra-native hook at `.libra/hooks/pre-commit.sh` (templates live in the Libra source tree at `template/pre-commit.sh` / `template/pre-commit.ps1`).
 
@@ -305,6 +327,10 @@ libra publish init | status | sync | deploy
 ```
 
 Cloud backup needs `LIBRA_D1_*`; tiered S3/R2 storage needs `LIBRA_STORAGE_*`. Large blobs use Libra's built-in LFS (`.libra_attributes`, not Git LFS). Details, plus Git interchange via `bundle` / `fast-export`, in [`references/cloud-publish.md`](references/cloud-publish.md).
+
+For releases, create an annotated tag after checks pass:
+`libra tag -m "Release v1.2.0" v1.2.0`. When signing is required, add `-s`
+at creation and verify with `libra tag -v v1.2.0`. Push with `libra push origin v1.2.0`.
 
 ## Structured Output & Error Codes
 
