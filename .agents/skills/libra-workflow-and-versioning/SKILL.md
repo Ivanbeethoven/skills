@@ -2,7 +2,7 @@
 name: libra-workflow-and-versioning
 description: Structures Libra (AI-agent-native VCS) workflow practices. Use when making any change in a `libra` repository. Use when committing, branching, working across worktrees, backing up to the cloud, or organizing work for AI agents. Adapts git-workflow-and-versioning to Libra's SQLite-backed refs, per-worktree HEAD over shared object storage, and structured CLI surface.
 metadata:
-  libra_version: "0.22.19"
+  libra_version: "0.22.47"
 ---
 
 # Libra Workflow and Versioning
@@ -15,7 +15,7 @@ Treat commits as save points, branches as sandboxes, and history as documentatio
 
 **Libra is not Git.** Most commands mirror Git (`add`, `commit`, `branch`, `merge`, `rebase`, `log`, `diff`, `bisect`), but the storage model and a few behaviors diverge deliberately. When unsure whether a flag is honored, consult `COMPATIBILITY.md` at the root of the Libra source tree — every top-level command is classed `supported` / `partial` / `unsupported` / `intentionally-different` — and `docs/commands/<name>.md` for the per-flag contract. The biggest divergences for everyday workflow are **worktrees**, **commit signing**, and **commit conventions**.
 
-> Verified against **Libra 0.22.19**. Libra moves fast: when anything here contradicts `libra <cmd> --help` or `docs/commands/<name>.md`, the binary wins — `CHANGELOG.md` carries the breaking-change trail.
+> Verified against **Libra 0.22.47**. Libra moves fast: when anything here contradicts `libra <cmd> --help` or `docs/commands/<name>.md`, the binary wins — `CHANGELOG.md` carries the breaking-change trail.
 
 **Deeper references** (read on demand, not up front):
 
@@ -39,6 +39,13 @@ existing project. Read repository-local `AGENTS.md` and contribution instruction
 before editing. Report authentication or metadata failures by their `LBR-*` code;
 never edit `.libra/` manually. Use `libra --offline` only when local objects are
 intentionally sufficient.
+
+Once per session, also check for a newer Libra: `libra --json upgrade --check`
+(report-only, never installs). If `data.status` is `available`, surface it to the
+developer — `installed` → `latest` — and offer `libra upgrade`. The command never
+installs on an unconfirmed default (non-interactive stdin is refused), so `--yes`
+is the agent-side path: run it only on the developer's explicit OK. `LBR-CONFIG-001`
+(config DB newer than this binary) is the same signal: someone upgraded elsewhere.
 
 ## Core Principles
 
@@ -126,13 +133,7 @@ Small cleanups (renaming one variable) can ride along in a feature commit at rev
 
 ### 5. Size Your Changes
 
-Target ~100 lines per commit/PR. Changes over ~1000 lines should be split.
-
-```
-~100 lines  → Easy to review, easy to revert
-~300 lines  → Acceptable for a single logical change
-~1000 lines → Split into smaller changes
-```
+Target ~100 lines per commit/PR (~300 acceptable for one logical change); over ~1000 lines, split.
 
 ## Libra Commit Conventions
 
@@ -215,12 +216,9 @@ Four traps before you use it: no basename-branch default, one checkout per branc
 
 ```
 Agent starts work
-    │
-    ├── Makes a change
-    │   ├── Test passes? → libra add <files> → libra commit -s -m → Continue
-    │   └── Test fails?  → libra reset --hard HEAD → Investigate
-    │
-    └── Feature complete → All commits form a clean history
+  change → test passes: libra add <files> → libra commit -s -m → continue
+         → test fails:  libra reset --hard HEAD → investigate
+  feature complete → all commits form a clean history
 ```
 
 You never lose more than one increment. If an agent goes off the rails, `libra reset --hard HEAD` returns to the last successful state. (Reflog is in SQLite — `libra reflog` recovers a lost commit even after a hard reset.)
@@ -363,7 +361,6 @@ Failures carry a **stable error code** and (on non-TTY stderr, or with `LIBRA_ER
 |---|---|
 | "I'll commit when the feature is done" | One giant commit is impossible to review, debug, or revert. Commit each slice. |
 | "`commit -a` is faster" | It stages out-of-band deletions and unrelated edits, and has silently reverted landed work. `libra add <files>` then `commit -s -m`. |
-| "Worktrees behave exactly like Git's" | Close, but not identical: a bare `add` is detached (no basename branch), a nonexistent branch fails closed, one checkout per branch, and `remove` detaches instead of deleting. |
 | "I'll pass two `-m` flags" | Rejected with `LBR-CLI-002`. Use one `-m` with newlines, or `-F`. |
 | "`-S` will use my gpg key" | `-S` / `--gpg-sign` are not exposed at all. Signing is vault-backed (libvault PGP) and on by default; skip it per commit with `--no-gpg-sign`. |
 | "I'll force-rewrite `main`" | `main` / `intent` / `traces` are locked. Merge into them instead. |
@@ -381,6 +378,7 @@ Failures carry a **stable error code** and (on non-TTY stderr, or with `LIBRA_ER
 - No `.libraignore` / `.gitignore`
 - Long-lived branches that diverge significantly from `main`
 - Force-pushing to shared branches; fighting locked-branch protection with workarounds
+- `libra --json upgrade --check` says `available` and the developer was never told
 - Changing a Git-compat command without syncing `COMPATIBILITY.md` + `docs/commands/<name>.md` + integration scenarios
 
 ## Verification
