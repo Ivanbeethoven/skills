@@ -115,8 +115,9 @@ Do not substitute a WSL transcript or manually fabricate a checkpoint as proof.
 This local implementation opens capture storage using no-follow Windows handles
 and rejects reparse points/junctions, alternate streams, device aliases and UNC
 capture storage. Private keys use protected current-user/SYSTEM ACLs, locking and
-atomic no-replace publication through native directory-handle APIs; do not repair
-authentication failures by deleting a key.
+atomic no-replace publication through native directory-handle APIs. Unprotected
+inherited ACLs are rejected; do not repair authentication failures by deleting a
+key.
 
 The Windows OpenCode exporter runs **without an OS filesystem or network
 sandbox**. It runs only an explicitly trusted executable after checking its bytes
@@ -134,13 +135,28 @@ the shared Required sandbox policy to make the Windows exporter work. This local
 Windows verification does not establish support for every provider, filesystem,
 historical import mode, or native reasoning archive.
 
+Checkpoint listing and ordinary transcript export are available. Owner-only raw
+reasoning-artifact file export and the object/findings scans in `libra agent
+doctor` remain unavailable on Windows. Doctor reports those scans as unavailable,
+does not claim a complete scan, and applies no repairs to them.
+
 ## Local validation recorded on 2026-10-15
 
-The unmerged native Windows build completed a real OpenCode **2.0.29** run.
+An earlier unmerged native Windows build completed a real OpenCode **2.0.29** run.
 Session `opencode__ses_ec23388e1ffe976p6aDB5ovuiV` produced checkpoint
 `9bca2f55-054f-52dd-9ef8-5b32541c46d0`. Its redacted JSONL export was **1,867
 bytes** and contained the user's prompt plus assistant text
 `Native Windows capture works.` The operator retained it as
 `windows-capture-demo-20261015/opencode-session-export.jsonl` outside the source
-checkout. This is evidence for that local development build; no upstream release,
-Unix build, additional provider or native reasoning capability is implied.
+checkout. This remains evidence for that local development build. A fresh real
+OpenCode run of the final hardened implementation is still pending.
+
+Subsequent focused validation passed nine Windows primitive tests, including
+rejection of unprotected inherited ACLs, and the UTF-16 scope wire test. A
+separate Unix build also passed: Ubuntu-24.04 under WSL, Rust 1.98.1,
+`cargo build -j 2`, completing in 16 minutes 30 seconds. WSL was used only for this
+independent Unix compatibility check; the Windows executable was compiled
+natively. Clippy and the full test suite are still pending.
+
+These local checks do not imply an upstream release, support for additional
+providers, or native reasoning archival capability.
