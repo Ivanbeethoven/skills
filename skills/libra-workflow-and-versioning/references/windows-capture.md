@@ -2,8 +2,10 @@
 
 This reference describes the Windows implementation being developed on top of
 `libra-tools/libra` commit `f306cc9` (package version 0.30.49), checked on
-2026-10-15. These changes are local, unmerged and unreleased. Neither the version
-number nor an upstream release alone establishes Windows capture support. Use a
+2026-10-15. The implementation is proposed in
+[Libra PR #632](https://github.com/libra-tools/libra/pull/632) and remains unmerged
+and unreleased. Neither the version number nor an upstream release alone
+establishes Windows capture support. Use a
 binary built from the changed source and inspect its own command help. The
 parent skill's 0.30.49 version anchor covers the upstream command contracts;
 it does not establish that these Windows changes have been released.
@@ -154,9 +156,11 @@ OpenCode run of the final hardened implementation is still pending.
 Subsequent focused validation passed nine Windows primitive tests, including
 rejection of unprotected inherited ACLs, and the UTF-16 scope wire test. A
 separate Unix build also passed: Ubuntu-24.04 under WSL, Rust 1.98.1,
-`cargo build -j 2`, completing in 16 minutes 30 seconds. WSL was used only for this
-independent Unix compatibility check; the Windows executable was compiled
-natively. Clippy and the full test suite are still pending.
+`cargo build -j 2`, completing in 16 minutes 30 seconds. On that Unix runner,
+`cargo clippy --all-targets --all-features -- -D warnings` also passed. WSL was
+used only for these independent Unix compatibility checks; the Windows
+executable was compiled natively. The full test suite, final hardened Windows
+build and fresh real OpenCode acceptance run are still pending.
 
 These local checks do not imply an upstream release, support for additional
 providers, or native reasoning archival capability.
